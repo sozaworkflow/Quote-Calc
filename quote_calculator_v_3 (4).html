@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Quote Calculator</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&display=swap');
+
+body {
+font-family: 'Space Grotesk', sans-serif;
+margin: 0;
+padding:  0;
+background-color: #fdfaf6;
+}
+.container {
+max-width: 800px;
+margin: 40px auto;
+background: #fffefc;
+padding: 30px;
+border-radius: 12px;
+box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+border: 2px solid #f0b429;
+}
+h2 {
+text-align: center;
+color: #e57c04;
+}
+label {
+font-weight: 600;
+color: #333;
+}
+input, select, textarea {
+width: 100%;
+padding: 10px;
+margin: 6px 0 16px;
+border: 1px solid #ddd;
+border-radius: 6px;
+font-size: 1rem;
+}
+.slider {
+margin-bottom: 16px;
+}
+.slider-label {
+display: flex;
+justify-content: space-between;
+align-items: center;
+color: #333;
+font-weight: 600;
+}
+button {
+background-color: #e57c04;
+color: white;
+padding: 12px 24px;
+border: none;
+border-radius: 8px;
+font-size: 1rem;
+cursor: pointer;
+transition: background-color 0.3s ease;
+margin-right: 10px;
+margin-top: 10px;
+}
+button:hover {
+background-color: #c96500;
+}
+.output {
+margin-top: 30px;
+padding: 25px;
+border-top: 3px solid #f0b429;
+background-color: #fff7e6;
+}
+.breakdown {
+margin-top: 10px;
+line-height: 1.8;
+}
+.breakdown span.total {
+display: block;
+font-size: 2rem;
+color: #d35400;
+margin-top: 10px;
+font-weight: bold;
+}
+.ai-suggestions {
+margin-top: 20px;
+padding: 15px;
+background-color: #f0f8ff;
+border-left: 4px solid #007acc;
+}
+#loadingMessage {
+display: none;
+margin-top: 10px;
+font-weight: 600;
+color: #007acc;
+}
+</style>
+</head>
+<body>
+<div class="container">
+<h2>Quote Calculator</h2>
+<label>Job Type</label>
+<input type="text" id="jobType" />
+
+<label>Job Description</label>
+<textarea id="jobDescription" rows="4" placeholder="Describe the job in detail..."></textarea>
+
+<label>Estimated Hours</label>
+<input type="number" id="hours" />
+
+<label>Number of Workers</label>
+<input type="number" id="workers" />
+
+<label>Labor Rate ($/hr)</label>
+<input type="number" id="rate" />
+
+<label>Material Cost ($)</label>
+<input type="number" id="materialCost" />
+
+<div class="slider-label">
+<label>Material Markup (%)</label>
+<span id="markupValue">20%</span>
+</div>
+<input type="range" id="markup" class="slider" min="0" max="100" value="20" />
+
+<label>Travel Fee ($)</label>
+<input type="number" id="travel" />
+
+<div class="slider-label">
+<label>Tax (%)</label>
+<span id="taxValue">5%</span>
+</div>
+<input type="range" id="tax" class="slider" min="0" max="20" value="5" />
+
+<div class="slider-label">
+<label>Discount (%)</label>
+<span id="discountValue">0%</span>
+</div>
+<input type="range" id="discount" class="slider" min="0" max="100" value="0" />
+
+<div class="slider-label">
+<label>Overhead Fee (typically profit)</label>
+<span id="overheadValue">10%</span>
+</div>
+<input type="range" id="overhead" class="slider" min="10" max="50" value="10" />
+
+<button onclick="calculateQuote()">Calculate Quote</button>
+<button onclick="getAIAdvice()">AI Generated Advice</button>
+<p id="loadingMessage">Waiting for AI suggestions...</p>
+
+<div class="output" id="output"></div>
+<div class="ai-suggestions" id="aiSuggestions"></div>
+</div>
+
+<script>
+const markupSlider = document.getElementById("markup");
+const taxSlider = document.getElementById("tax");
+const discountSlider = document.getElementById("discount");
+const overheadSlider = document.getElementById("overhead");
+
+markupSlider.oninput = () => document.getElementById("markupValue").innerText = markupSlider.value + "%";
+taxSlider.oninput = () => document.getElementById("taxValue").innerText = taxSlider.value + "%";
+discountSlider.oninput = () => document.getElementById("discountValue").innerText = discountSlider.value + "%";
+overheadSlider.oninput = () => document.getElementById("overheadValue").innerText = overheadSlider.value + "%";
+
+function calculateQuote() {
+  const hours = parseFloat(document.getElementById("hours").value);
+  const workers = parseFloat(document.getElementById("workers").value);
+  const rate = parseFloat(document.getElementById("rate").value);
+  const material = parseFloat(document.getElementById("materialCost").value);
+  const markup = parseFloat(markupSlider.value);
+  const travel = parseFloat(document.getElementById("travel").value);
+  const tax = parseFloat(taxSlider.value);
+  const discount = parseFloat(discountSlider.value);
+  const overhead = parseFloat(overheadSlider.value);
+
+  const baseLaborCost = hours * rate * workers;
+  const laborCost = baseLaborCost * 1.15;
+  const materialCost = material + (material * markup / 100);
+  const subtotal = laborCost + materialCost + travel;
+  const taxAmount = subtotal * tax / 100;
+  const discountAmount = subtotal * discount / 100;
+  const overheadAmount = subtotal * overhead / 100;
+  const total = subtotal + taxAmount - discountAmount + overheadAmount;
+  const rawCost = baseLaborCost + material + travel;
+  const profit = total - rawCost;
+
+  const breakdown = `<div class='breakdown'>
+    <strong>Base Labor Cost:</strong> $${baseLaborCost.toFixed(2)}<br/>
+    <strong>Labor Cost + 15% Margin:</strong> $${laborCost.toFixed(2)}<br/>
+    <strong>Material Cost (with ${markup}% markup):</strong> $${materialCost.toFixed(2)}<br/>
+    <strong>Travel Fee:</strong> $${travel.toFixed(2)}<br/>
+    <strong>Tax (${tax}%):</strong> $${taxAmount.toFixed(2)}<br/>
+    <strong>Discount (${discount}%):</strong> -$${discountAmount.toFixed(2)}<br/>
+    <strong>Overhead Fee (${overhead}%):</strong> $${overheadAmount.toFixed(2)}<br/>
+    <span class='total'>Total: $${total.toFixed(2)}</span><br/>
+    <strong>Estimated Profit:</strong> $${profit.toFixed(2)}
+  </div>`;
+  document.getElementById("output").innerHTML = breakdown;
+  document.getElementById("aiSuggestions").innerHTML = "";
+}
+
+async function getAIAdvice() {
+  const jobType = document.getElementById("jobType").value;
+  const jobDescription = document.getElementById("jobDescription").value;
+  const loadingMessage = document.getElementById("loadingMessage");
+  const aiSuggestions = document.getElementById("aiSuggestions");
+
+  loadingMessage.style.display = "block";
+  aiSuggestions.innerHTML = "";
+
+  try {
+    const response = await fetch("https://sozaworkflow.app.n8n.cloud/webhook/quote-intake", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        jobType: jobType,
+        jobDescription: jobDescription
+      })
+    });
+
+    const data = await response.json();
+    const aiText = typeof data.advice === "object" && data.advice.content
+      ? data.advice.content
+      : data.advice;
+    aiSuggestions.innerHTML = `<strong>AI Suggestions:</strong><br/>${aiText}`;
+  } catch (error) {
+    aiSuggestions.innerHTML = `<strong>Error:</strong> Failed to fetch AI advice.`;
+  } finally {
+    loadingMessage.style.display = "none";
+  }
+}
+</script>
+</body>
+</html>
